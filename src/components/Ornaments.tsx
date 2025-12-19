@@ -31,14 +31,22 @@ const CinematicBaubleMaterial = shaderMaterial(
 
     void main() {
       vInstanceColor = instanceColor;
-      vNormal = normalize(normalMatrix * normal);
+      
+      // Calculate World Space Normal correctly for InstancedMesh
+      // Assuming uniform scaling, we can just transform by the model*instance matrix
+      // For non-uniform scaling, we would need the inverse transpose
       vec4 worldPosition = modelMatrix * instanceMatrix * vec4(position, 1.0);
       vWorldPos = worldPosition.xyz;
+
+      // Use the instance matrix to rotate the normal
+      mat3 instanceNormalMatrix = mat3(modelMatrix * instanceMatrix);
+      vNormal = normalize(instanceNormalMatrix * normal);
+
       vViewDir = normalize(cameraPosition - worldPosition.xyz);
       gl_Position = projectionMatrix * viewMatrix * worldPosition;
     }
   `,
-  // Fragment Shader - View Independent
+  // Fragment Shader - Cinematic Glass
   `
     uniform float uTime;
 
@@ -53,47 +61,40 @@ const CinematicBaubleMaterial = shaderMaterial(
 
     void main() {
       vec3 normal = normalize(vNormal);
+      vec3 viewDir = normalize(vViewDir);
 
-      // Fixed "Studio" Lighting - constant regardless of camera angle
-      vec3 lightDir = normalize(vec3(0.5, 1.0, 0.8));
+      // Fresnel rim light - glass edge effect
+      float NdotV = dot(viewDir, normal);
+      float fresnel = pow(1.0 - max(NdotV, 0.0), 3.0);
 
-      // Half-Lambert Diffuse - wraps light around for translucency effect
-      float NdotL = dot(normal, lightDir);
-      float softDiffuse = NdotL * 0.5 + 0.5;
+      // Iridescence - subtle rainbow shift based on view angle
+      vec3 iridescence = 0.5 + 0.5 * cos(uTime * 0.3 + viewDir.yxz * 2.5 + vec3(0.0, 2.1, 4.2));
 
-      // Vertical gradient - simulates glass density variation
-      float verticalGrad = smoothstep(-1.0, 1.0, normal.y);
+      // Subsurface glow - internal light scattering
+      float sss = smoothstep(0.0, 1.0, NdotV * 0.6 + 0.4);
 
-      // Static specular highlight based on fixed light
-      float fakeSpec = smoothstep(0.95, 1.0, NdotL);
+      // Specular highlight
+      vec3 lightDir = normalize(vec3(1.0, 2.0, 1.5));
+      vec3 halfVec = normalize(lightDir + viewDir);
+      float spec = pow(max(dot(normal, halfVec), 0.0), 64.0);
 
-      // World-space shimmer - attached to object, not view
+      // Combine effects
+      vec3 baseColor = vInstanceColor;
+      vec3 finalColor = baseColor * sss * 0.8;
+      finalColor += iridescence * fresnel * 0.4;
+      finalColor += vec3(1.0, 0.95, 0.9) * fresnel * 1.2;
+      finalColor += vec3(1.0) * spec * 0.8;
+
+      // Sparkle effect
       float noiseTime = uTime * 0.5;
       float shimmerWave = sin(vWorldPos.x * 8.0 + vWorldPos.y * 12.0 + noiseTime);
-      float sparkle = step(0.95, hash(vWorldPos.xy * 10.0 + vec2(shimmerWave))) * 0.5;
+      float sparkle = step(0.97, hash(vWorldPos.xy * 10.0 + vec2(shimmerWave))) * fresnel;
+      finalColor += vec3(1.0) * sparkle * 2.0;
 
-      // Composition
-      vec3 baseColor = vInstanceColor;
+      // Emissive glow for bloom pickup
+      finalColor += baseColor * 0.15;
 
-      // Rich glass color - darker in shadows, brighter in light
-      vec3 shadowTone = baseColor * 0.8;
-      vec3 lightTone = mix(baseColor, vec3(1.0), 0.3);
-
-      vec3 finalColor = mix(shadowTone, lightTone, softDiffuse);
-
-      // Vertical gradient for depth
-      finalColor += baseColor * verticalGrad * 0.3;
-
-      // Static highlight
-      finalColor += vec3(1.0, 0.95, 0.9) * fakeSpec * 0.4;
-
-      // Sparkle
-      finalColor += vec3(1.0) * sparkle;
-
-      // Inner glow
-      finalColor += baseColor * 0.2;
-
-      gl_FragColor = vec4(finalColor, 0.95);
+      gl_FragColor = vec4(finalColor, 0.92);
     }
   `
 )
