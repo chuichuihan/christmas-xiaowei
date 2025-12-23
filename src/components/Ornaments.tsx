@@ -266,8 +266,8 @@ function Lights({ mixRef, count }: { mixRef: { current: number }; count: number 
     if (!meshRef.current) return
     for (let i = 0; i < count; i++) {
       const rand = Math.random()
-      // Christmas lights: warm white, red, green
-      const color = rand < 0.7 ? '#ffffe0' : (rand < 0.85 ? '#ff0000' : '#00ff00')
+      // Christmas lights: warm golden, red, green
+      const color = rand < 0.7 ? '#ffd700' : (rand < 0.85 ? '#ff0000' : '#00ff00')
       meshRef.current.setColorAt(i, new THREE.Color(color))
     }
     meshRef.current.instanceColor!.needsUpdate = true
@@ -290,10 +290,30 @@ function Lights({ mixRef, count }: { mixRef: { current: number }; count: number 
     meshRef.current.instanceMatrix.needsUpdate = true
   })
 
+  const glowMaterial = useMemo(() => new THREE.ShaderMaterial({
+    vertexShader: `
+      varying vec3 vColor;
+      void main() {
+        vColor = instanceColor;
+        gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      varying vec3 vColor;
+      void main() {
+        gl_FragColor = vec4(vColor * 2.0, 1.0);
+      }
+    `,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    transparent: true,
+    toneMapped: false
+  }), [])
+
   return (
     <instancedMesh ref={meshRef} args={[undefined, undefined, count]}>
       <sphereGeometry args={[1, 8, 8]} />
-      <meshBasicMaterial toneMapped={false} />
+      <primitive object={glowMaterial} attach="material" />
     </instancedMesh>
   )
 }
