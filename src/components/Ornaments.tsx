@@ -3,6 +3,7 @@ import { useFrame, extend, type ThreeElement } from '@react-three/fiber'
 import * as THREE from 'three'
 import { shaderMaterial } from '@react-three/drei'
 import { generateOrnamentPosition } from '../utils/math'
+import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 
 interface OrnamentsProps {
   mixRef: { current: number }
@@ -32,13 +33,9 @@ const CinematicBaubleMaterial = shaderMaterial(
     void main() {
       vInstanceColor = instanceColor;
       
-      // Calculate World Space Normal correctly for InstancedMesh
-      // Assuming uniform scaling, we can just transform by the model*instance matrix
-      // For non-uniform scaling, we would need the inverse transpose
       vec4 worldPosition = modelMatrix * instanceMatrix * vec4(position, 1.0);
       vWorldPos = worldPosition.xyz;
 
-      // Use the instance matrix to rotate the normal
       mat3 instanceNormalMatrix = mat3(modelMatrix * instanceMatrix);
       vNormal = normalize(instanceNormalMatrix * normal);
 
@@ -63,35 +60,27 @@ const CinematicBaubleMaterial = shaderMaterial(
       vec3 normal = normalize(vNormal);
       vec3 viewDir = normalize(vViewDir);
 
-      // Fresnel rim light - glass edge effect
       float NdotV = dot(viewDir, normal);
       float fresnel = pow(1.0 - max(NdotV, 0.0), 3.0);
 
-      // Iridescence - subtle rainbow shift based on view angle
       vec3 iridescence = 0.5 + 0.5 * cos(uTime * 0.3 + viewDir.yxz * 2.5 + vec3(0.0, 2.1, 4.2));
-
-      // Subsurface glow - internal light scattering
       float sss = smoothstep(0.0, 1.0, NdotV * 0.6 + 0.4);
 
-      // Specular highlight
       vec3 lightDir = normalize(vec3(1.0, 2.0, 1.5));
       vec3 halfVec = normalize(lightDir + viewDir);
       float spec = pow(max(dot(normal, halfVec), 0.0), 64.0);
 
-      // Combine effects
       vec3 baseColor = vInstanceColor;
       vec3 finalColor = baseColor * sss * 0.8;
       finalColor += iridescence * fresnel * 0.4;
       finalColor += vec3(1.0, 0.95, 0.9) * fresnel * 1.2;
       finalColor += vec3(1.0) * spec * 0.8;
 
-      // Sparkle effect
       float noiseTime = uTime * 0.5;
       float shimmerWave = sin(vWorldPos.x * 8.0 + vWorldPos.y * 12.0 + noiseTime);
       float sparkle = step(0.97, hash(vWorldPos.xy * 10.0 + vec2(shimmerWave))) * fresnel;
       finalColor += vec3(1.0) * sparkle * 2.0;
 
-      // Emissive glow for bloom pickup
       finalColor += baseColor * 0.15;
 
       gl_FragColor = vec4(finalColor, 0.92);
@@ -109,181 +98,12 @@ declare module '@react-three/fiber' {
   }
 }
 
-// Baubles Component - Cinematic glass-like spheres
-function Baubles({ mixRef, count, scale }: { mixRef: { current: number }; count: number; scale: number }) {
-  const meshRef = useRef<THREE.InstancedMesh>(null)
-  const materialRef = useRef<THREE.ShaderMaterial>(null)
-  const dummy = useMemo(() => new THREE.Object3D(), [])
-
-  const { treeData, scatterData, weights } = useMemo(() => {
-    const tree: THREE.Vector3[] = []
-    const scatter: THREE.Vector3[] = []
-    const w: number[] = []
-
-    for (let i = 0; i < count; i++) {
-      const pos = generateOrnamentPosition('bauble')
-      tree.push(pos.tree)
-      scatter.push(pos.scatter)
-      w.push(0.5 + Math.random() * 0.3)
-    }
-    return { treeData: tree, scatterData: scatter, weights: w }
-  }, [count])
-
-  useLayoutEffect(() => {
-    if (!meshRef.current) return
-    for (let i = 0; i < count; i++) {
-      const rand = Math.random()
-      const colorType = rand < 0.7 ? 'pink' : 'gold'
-      meshRef.current.setColorAt(i, new THREE.Color(getRandomColor(colorType)))
-    }
-    meshRef.current.instanceColor!.needsUpdate = true
-  }, [count])
-
-  useFrame((state) => {
-    if (!meshRef.current) return
-    const t = mixRef.current
-    const time = state.clock.elapsedTime
-
-    // Update shader time uniform
-    if (materialRef.current) {
-      materialRef.current.uniforms.uTime.value = time
-    }
-
-    for (let i = 0; i < count; i++) {
-      const tree = treeData[i]
-      const scatter = scatterData[i]
-      const weight = weights[i]
-
-      const wave = Math.sin(time * 0.5 + i) * weight * (1 - t) * 0.5
-
-      dummy.position.lerpVectors(scatter, tree, t)
-      dummy.position.y += wave
-      dummy.scale.setScalar(scale * (0.7 + 0.3 * t))
-      dummy.updateMatrix()
-      meshRef.current.setMatrixAt(i, dummy.matrix)
-    }
-    meshRef.current.instanceMatrix.needsUpdate = true
-  })
-
-  return (
-    <instancedMesh ref={meshRef} args={[undefined, undefined, count]} renderOrder={1}>
-      <sphereGeometry args={[1, 32, 32]} />
-      <cinematicBaubleMaterial ref={materialRef} transparent depthWrite={true} />
-    </instancedMesh>
-  )
-}
-
-// Lights Component - Pink and Gold glow
-function Lights({ mixRef, count }: { mixRef: { current: number }; count: number }) {
-  const meshRef = useRef<THREE.InstancedMesh>(null)
-  const dummy = useMemo(() => new THREE.Object3D(), [])
-
-  const { treeData, scatterData } = useMemo(() => {
-    const tree: THREE.Vector3[] = []
-    const scatter: THREE.Vector3[] = []
-
-    for (let i = 0; i < count; i++) {
-      const pos = generateOrnamentPosition('light')
-      tree.push(pos.tree)
-      scatter.push(pos.scatter)
-    }
-    return { treeData: tree, scatterData: scatter }
-  }, [count])
-
-  useLayoutEffect(() => {
-    if (!meshRef.current) return
-    for (let i = 0; i < count; i++) {
-      // 60% pink, 40% gold
-      const rand = Math.random()
-      const colorType = rand < 0.6 ? 'pink' : 'gold'
-      meshRef.current.setColorAt(i, new THREE.Color(getRandomColor(colorType)))
-    }
-    meshRef.current.instanceColor!.needsUpdate = true
-  }, [count])
-
-  useFrame((state) => {
-    if (!meshRef.current) return
-    const t = mixRef.current
-    const time = state.clock.elapsedTime
-
-    for (let i = 0; i < count; i++) {
-      const tree = treeData[i]
-      const scatter = scatterData[i]
-
-      dummy.position.lerpVectors(scatter, tree, t)
-      const twinkle = 0.8 + 0.2 * Math.sin(time * 3 + i * 0.5)
-      dummy.scale.setScalar(0.08 * twinkle)
-      dummy.updateMatrix()
-      meshRef.current.setMatrixAt(i, dummy.matrix)
-    }
-    meshRef.current.instanceMatrix.needsUpdate = true
-  })
-
-  return (
-    <instancedMesh ref={meshRef} args={[undefined, undefined, count]}>
-      <sphereGeometry args={[1, 8, 8]} />
-      <meshBasicMaterial toneMapped={false} />
-    </instancedMesh>
-  )
-}
-
-// Diamonds Component - Crystal with pink/gold reflection
-function Diamonds({ mixRef, count }: { mixRef: { current: number }; count: number }) {
-  const meshRef = useRef<THREE.InstancedMesh>(null)
-  const dummy = useMemo(() => new THREE.Object3D(), [])
-
-  const { treeData, scatterData } = useMemo(() => {
-    const tree: THREE.Vector3[] = []
-    const scatter: THREE.Vector3[] = []
-
-    for (let i = 0; i < count; i++) {
-      const pos = generateOrnamentPosition('diamond')
-      tree.push(pos.tree)
-      scatter.push(pos.scatter)
-    }
-    return { treeData: tree, scatterData: scatter }
-  }, [count])
-
-  useFrame((state) => {
-    if (!meshRef.current) return
-    const t = mixRef.current
-    const time = state.clock.elapsedTime
-
-    for (let i = 0; i < count; i++) {
-      const tree = treeData[i]
-      const scatter = scatterData[i]
-
-      dummy.position.lerpVectors(scatter, tree, t)
-      dummy.rotation.y = time * 0.5 + i
-      dummy.rotation.x = time * 0.3
-      dummy.scale.setScalar(0.2)
-      dummy.updateMatrix()
-      meshRef.current.setMatrixAt(i, dummy.matrix)
-    }
-    meshRef.current.instanceMatrix.needsUpdate = true
-  })
-
-  return (
-    <instancedMesh ref={meshRef} args={[undefined, undefined, count]}>
-      <octahedronGeometry args={[1, 0]} />
-      <meshPhysicalMaterial
-        color="#ffb6c1"
-        metalness={0.1}
-        roughness={0}
-        transmission={0.9}
-        thickness={0.5}
-        clearcoat={1.0}
-      />
-    </instancedMesh>
-  )
-}
-
 // Luxury Gift Shader - Velvet/Brocade with metallic ribbon
 const LuxuryGiftMaterial = shaderMaterial(
   {
     uTime: 0,
-    uBaseColor: new THREE.Color('#8B0035'),
-    uRibbonColor: new THREE.Color('#FFD700'),
+    uBaseColor: new THREE.Color('#D81B60'), // Deep Rose Pink
+    uRibbonColor: new THREE.Color('#FFF0F5'), // Lavender Blush (Creamy)
   },
   // Vertex Shader
   `
@@ -320,36 +140,29 @@ const LuxuryGiftMaterial = shaderMaterial(
       vec3 normal = normalize(vNormal);
       vec3 viewDir = normalize(vViewDir);
 
-      // Ribbon detection (cross pattern)
       float ribbonWidth = 0.12;
       float isRibbonH = step(abs(vUv.x - 0.5), ribbonWidth);
       float isRibbonV = step(abs(vUv.y - 0.5), ribbonWidth);
       float isRibbon = max(isRibbonH, isRibbonV);
 
-      // Damask/Brocade pattern for velvet
       float pattern1 = sin(vUv.x * 25.0) * cos(vUv.y * 25.0);
       float pattern2 = sin((vUv.x + vUv.y) * 15.0) * 0.5;
       float pattern = smoothstep(-0.5, 0.5, pattern1 + pattern2) * 0.15;
 
-      // Velvet sheen (angle-dependent brightness)
       float sheen = 1.0 - abs(dot(normal, viewDir));
       sheen = pow(sheen, 2.0);
 
-      // Velvet color with pattern
       vec3 velvetColor = uBaseColor * (0.85 + pattern);
-      velvetColor += vec3(0.3, 0.1, 0.15) * sheen * 0.6;
+      velvetColor += vec3(0.4, 0.2, 0.3) * sheen * 0.6; 
 
-      // Metallic ribbon with crease effect
       float ribbonCrease = sin(vUv.x * 80.0) * sin(vUv.y * 80.0) * 0.1;
-      vec3 ribbonFinal = uRibbonColor * (0.7 + sheen * 0.5 + ribbonCrease);
+      vec3 ribbonFinal = uRibbonColor * (0.9 + sheen * 0.3 + ribbonCrease);
 
-      // Ribbon specular highlight
       vec3 lightDir = normalize(vec3(1.0, 1.0, 1.0));
       vec3 halfVec = normalize(lightDir + viewDir);
       float ribbonSpec = pow(max(dot(normal, halfVec), 0.0), 32.0);
       ribbonFinal += vec3(1.0) * ribbonSpec * isRibbon * 0.5;
 
-      // Sparkle/glitter on velvet
       float sparkle = step(0.985, hash(vUv * 100.0 + floor(uTime * 2.0))) * (1.0 - isRibbon);
       velvetColor += vec3(1.0, 0.9, 0.95) * sparkle * 0.8;
 
@@ -370,28 +183,207 @@ declare module '@react-three/fiber' {
   }
 }
 
-// Gifts Component - Luxury velvet with gold ribbon
-function Gifts({ mixRef, count }: { mixRef: { current: number }; count: number }) {
+// Baubles Component
+function Baubles({ mixRef, count, scale }: { mixRef: { current: number }; count: number; scale: number }) {
   const meshRef = useRef<THREE.InstancedMesh>(null)
   const materialRef = useRef<THREE.ShaderMaterial>(null)
   const dummy = useMemo(() => new THREE.Object3D(), [])
 
-  const { treeData, scatterData, rotations } = useMemo(() => {
+  const { treeData, scatterData, weights } = useMemo(() => {
     const tree: THREE.Vector3[] = []
     const scatter: THREE.Vector3[] = []
-    const rot: number[] = []
+    const w: number[] = []
+    for (let i = 0; i < count; i++) {
+      const pos = generateOrnamentPosition('bauble')
+      tree.push(pos.tree)
+      scatter.push(pos.scatter)
+      w.push(0.5 + Math.random() * 0.3)
+    }
+    return { treeData: tree, scatterData: scatter, weights: w }
+  }, [count])
+
+  useLayoutEffect(() => {
+    if (!meshRef.current) return
+    for (let i = 0; i < count; i++) {
+      const rand = Math.random()
+      const colorType = rand < 0.7 ? 'pink' : 'gold'
+      meshRef.current.setColorAt(i, new THREE.Color(getRandomColor(colorType)))
+    }
+    meshRef.current.instanceColor!.needsUpdate = true
+  }, [count])
+
+  useFrame((state) => {
+    if (!meshRef.current) return
+    const t = mixRef.current
+    const time = state.clock.elapsedTime
+    if (materialRef.current) {
+      materialRef.current.uniforms.uTime.value = time
+    }
+    for (let i = 0; i < count; i++) {
+      const tree = treeData[i]
+      const scatter = scatterData[i]
+      const weight = weights[i]
+      const wave = Math.sin(time * 0.5 + i) * weight * (1 - t) * 0.5
+      dummy.position.lerpVectors(scatter, tree, t)
+      dummy.position.y += wave
+      dummy.scale.setScalar(scale * (0.7 + 0.3 * t))
+      dummy.updateMatrix()
+      meshRef.current.setMatrixAt(i, dummy.matrix)
+    }
+    meshRef.current.instanceMatrix.needsUpdate = true
+  })
+
+  return (
+    <instancedMesh ref={meshRef} args={[undefined, undefined, count]} renderOrder={1}>
+      <sphereGeometry args={[1, 32, 32]} />
+      <cinematicBaubleMaterial ref={materialRef} transparent depthWrite={true} />
+    </instancedMesh>
+  )
+}
+
+// Lights Component
+function Lights({ mixRef, count }: { mixRef: { current: number }; count: number }) {
+  const meshRef = useRef<THREE.InstancedMesh>(null)
+  const dummy = useMemo(() => new THREE.Object3D(), [])
+  const { treeData, scatterData } = useMemo(() => {
+    const tree: THREE.Vector3[] = []
+    const scatter: THREE.Vector3[] = []
+    for (let i = 0; i < count; i++) {
+      const pos = generateOrnamentPosition('light')
+      tree.push(pos.tree)
+      scatter.push(pos.scatter)
+    }
+    return { treeData: tree, scatterData: scatter }
+  }, [count])
+
+  useLayoutEffect(() => {
+    if (!meshRef.current) return
+    for (let i = 0; i < count; i++) {
+      const rand = Math.random()
+      const colorType = rand < 0.6 ? 'pink' : 'gold'
+      meshRef.current.setColorAt(i, new THREE.Color(getRandomColor(colorType)))
+    }
+    meshRef.current.instanceColor!.needsUpdate = true
+  }, [count])
+
+  useFrame((state) => {
+    if (!meshRef.current) return
+    const t = mixRef.current
+    const time = state.clock.elapsedTime
+    for (let i = 0; i < count; i++) {
+      const tree = treeData[i]
+      const scatter = scatterData[i]
+      dummy.position.lerpVectors(scatter, tree, t)
+      const twinkle = 0.8 + 0.2 * Math.sin(time * 3 + i * 0.5)
+      dummy.scale.setScalar(0.08 * twinkle)
+      dummy.updateMatrix()
+      meshRef.current.setMatrixAt(i, dummy.matrix)
+    }
+    meshRef.current.instanceMatrix.needsUpdate = true
+  })
+
+  return (
+    <instancedMesh ref={meshRef} args={[undefined, undefined, count]}>
+      <sphereGeometry args={[1, 8, 8]} />
+      <meshBasicMaterial toneMapped={false} />
+    </instancedMesh>
+  )
+}
+
+// Diamonds Component
+function Diamonds({ mixRef, count }: { mixRef: { current: number }; count: number }) {
+  const meshRef = useRef<THREE.InstancedMesh>(null)
+  const dummy = useMemo(() => new THREE.Object3D(), [])
+  const { treeData, scatterData } = useMemo(() => {
+    const tree: THREE.Vector3[] = []
+    const scatter: THREE.Vector3[] = []
+    for (let i = 0; i < count; i++) {
+      const pos = generateOrnamentPosition('diamond')
+      tree.push(pos.tree)
+      scatter.push(pos.scatter)
+    }
+    return { treeData: tree, scatterData: scatter }
+  }, [count])
+
+  useFrame((state) => {
+    if (!meshRef.current) return
+    const t = mixRef.current
+    const time = state.clock.elapsedTime
+    for (let i = 0; i < count; i++) {
+      const tree = treeData[i]
+      const scatter = scatterData[i]
+      dummy.position.lerpVectors(scatter, tree, t)
+      dummy.rotation.y = time * 0.5 + i
+      dummy.rotation.x = time * 0.3
+      dummy.scale.setScalar(0.2)
+      dummy.updateMatrix()
+      meshRef.current.setMatrixAt(i, dummy.matrix)
+    }
+    meshRef.current.instanceMatrix.needsUpdate = true
+  })
+
+  return (
+    <instancedMesh ref={meshRef} args={[undefined, undefined, count]}>
+      <octahedronGeometry args={[1, 0]} />
+      <meshPhysicalMaterial
+        color="#ffb6c1"
+        metalness={0.1}
+        roughness={0}
+        transmission={0.9}
+        thickness={0.5}
+        clearcoat={1.0}
+      />
+    </instancedMesh>
+  )
+}
+
+// Gifts Component - Luxury velvet with 3D Bows
+function Gifts({ mixRef, count }: { mixRef: { current: number }; count: number }) {
+  const boxRef = useRef<THREE.InstancedMesh>(null)
+  const bowRef = useRef<THREE.InstancedMesh>(null)
+  const materialRef = useRef<THREE.ShaderMaterial>(null)
+  const dummyBox = useMemo(() => new THREE.Object3D(), [])
+  const dummyBow = useMemo(() => new THREE.Object3D(), [])
+
+  // Create a merged geometry for a perfect bow shape
+  const bowGeometry = useMemo(() => {
+    // 1. Center Knot
+    const knotGeo = new THREE.SphereGeometry(0.12, 32, 16)
+    
+    // 2. Left Loop (Flattened Sphere)
+    const leftGeo = new THREE.SphereGeometry(0.25, 32, 16)
+    leftGeo.scale(1.0, 0.6, 0.4) // Flatten
+    leftGeo.rotateZ(0.3) // Tilt
+    leftGeo.translate(-0.22, 0.05, 0) // Shift left
+
+    // 3. Right Loop (Flattened Sphere)
+    const rightGeo = new THREE.SphereGeometry(0.25, 32, 16)
+    rightGeo.scale(1.0, 0.6, 0.4) // Flatten
+    rightGeo.rotateZ(-0.3) // Tilt
+    rightGeo.translate(0.22, 0.05, 0) // Shift right
+
+    const merged = BufferGeometryUtils.mergeGeometries([knotGeo, leftGeo, rightGeo])
+    return merged
+  }, [])
+
+  const { treeData, scatterData, rotations, scales } = useMemo(() => {
+    const tree: THREE.Vector3[] = []
+    const scatter: THREE.Vector3[] = []
+    const rot: THREE.Euler[] = []
+    const sc: number[] = []
 
     for (let i = 0; i < count; i++) {
       const pos = generateOrnamentPosition('gift')
       tree.push(pos.tree)
       scatter.push(pos.scatter)
-      rot.push(Math.random() * Math.PI * 2)
+      rot.push(new THREE.Euler(Math.random() * Math.PI, Math.random() * Math.PI * 2, Math.random() * Math.PI))
+      sc.push(0.8 + Math.random() * 0.4)
     }
-    return { treeData: tree, scatterData: scatter, rotations: rot }
+    return { treeData: tree, scatterData: scatter, rotations: rot, scales: sc }
   }, [count])
 
   useFrame((state) => {
-    if (!meshRef.current) return
+    if (!boxRef.current || !bowRef.current) return
     const t = mixRef.current
     const time = state.clock.elapsedTime
 
@@ -402,21 +394,59 @@ function Gifts({ mixRef, count }: { mixRef: { current: number }; count: number }
     for (let i = 0; i < count; i++) {
       const tree = treeData[i]
       const scatter = scatterData[i]
+      const r = rotations[i]
+      const s = scales[i]
 
-      dummy.position.lerpVectors(scatter, tree, t)
-      dummy.rotation.y = rotations[i]
-      dummy.scale.setScalar(0.35 * (0.6 + 0.4 * t))
-      dummy.updateMatrix()
-      meshRef.current.setMatrixAt(i, dummy.matrix)
+      // Interpolate position
+      dummyBox.position.lerpVectors(scatter, tree, t)
+      
+      // Base rotation + gentle spin
+      dummyBox.rotation.set(
+        r.x + time * 0.1,
+        r.y + time * 0.2,
+        r.z
+      )
+      
+      const currentScale = 0.35 * s * (0.6 + 0.4 * t)
+      dummyBox.scale.setScalar(currentScale)
+      dummyBox.updateMatrix()
+      boxRef.current.setMatrixAt(i, dummyBox.matrix)
+
+      // --- Update Bow ---
+      dummyBow.position.copy(dummyBox.position)
+      dummyBow.rotation.copy(dummyBox.rotation)
+      dummyBow.scale.setScalar(currentScale)
+      
+      // Move bow to top of box (local Y)
+      dummyBow.translateY(0.52 * currentScale) // Sit perfectly on top
+      
+      dummyBow.updateMatrix()
+      bowRef.current.setMatrixAt(i, dummyBow.matrix)
     }
-    meshRef.current.instanceMatrix.needsUpdate = true
+    
+    boxRef.current.instanceMatrix.needsUpdate = true
+    bowRef.current.instanceMatrix.needsUpdate = true
   })
 
   return (
-    <instancedMesh ref={meshRef} args={[undefined, undefined, count]}>
-      <boxGeometry args={[1, 1, 1]} />
-      <luxuryGiftMaterial ref={materialRef} />
-    </instancedMesh>
+    <group>
+      {/* Gift Boxes */}
+      <instancedMesh ref={boxRef} args={[undefined, undefined, count]}>
+        <boxGeometry args={[1, 1, 1]} />
+        <luxuryGiftMaterial ref={materialRef} />
+      </instancedMesh>
+      
+      {/* 3D Bows - Custom Merged Geometry */}
+      <instancedMesh ref={bowRef} args={[bowGeometry, undefined, count]}>
+        <meshStandardMaterial 
+          color="#FFF5EE" // Seashell (Creamy White)
+          roughness={0.4}
+          metalness={0.1}
+          emissive="#FFF5EE"
+          emissiveIntensity={0.3} // Gentle glow to stay white
+        />
+      </instancedMesh>
+    </group>
   )
 }
 

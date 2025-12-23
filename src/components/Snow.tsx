@@ -15,9 +15,9 @@ export function Snow() {
       const x = (Math.random() - 0.5) * 50
       const y = Math.random() * 40
       const z = (Math.random() - 0.5) * 50
-      const speed = 0.5 + Math.random() * 1.5
-      const factor = 0.5 + Math.random() * 0.5 // Scale factor
-      const swaySpeed = 0.5 + Math.random() // How fast it sways
+      const factor = 0.3 + Math.random() * 0.7
+      const speed = 0.2 + (factor * 0.8) + Math.random() * 0.3
+      const swaySpeed = 0.2 + Math.random() * 0.4
       const swayAmplitutde = 0.5 + Math.random() * 1.5 // How far it sways
       temp.push({ x, y, z, speed, factor, swaySpeed, swayAmplitutde, initialX: x, initialZ: z })
     }
@@ -31,7 +31,7 @@ export function Snow() {
 
     particles.forEach((particle, i) => {
       // Update Y position (falling)
-      particle.y -= particle.speed * 0.05
+      particle.y -= particle.speed * 0.02
       
       // Reset if too low
       if (particle.y < -5) {
