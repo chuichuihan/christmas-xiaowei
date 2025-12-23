@@ -24,10 +24,12 @@ void main() {
   float wobbleR = sin(uTime * 2.5 + aOffset * 12.0) * 0.15;
   float wobbleY = cos(uTime * 2.0 + aOffset * 9.0) * 0.1;
 
+  // Orbit radius: expanded to flow AROUND the tree, not on it
+  float riverRadius = coneRadius + 0.6 + wobbleR;
   vec3 pos = vec3(
-    cos(angle) * (coneRadius + wobbleR + 0.3),
+    cos(angle) * riverRadius,
     h + wobbleY,
-    sin(angle) * (coneRadius + wobbleR + 0.3)
+    sin(angle) * riverRadius
   );
 
   // Fade in/out at boundaries
