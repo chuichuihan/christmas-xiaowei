@@ -21,7 +21,7 @@ export function ResponsiveCamera() {
     const DESKTOP_ASPECT = 1.6
 
     const aspect = size.width / size.height
-    const t = MathUtils.clamp((aspect - MOBILE_ASPECT) / (DdadESKTOP_ASPECT - MOBILE_ASPECT), 0, 1)
+    const t = MathUtils.clamp((aspect - MOBILE_ASPECT) / (DESKTOP_ASPECT - MOBILE_ASPECT), 0, 1)
     const padding = MathUtils.lerp(MOBILE_PADDING, DESKTOP_PADDING, t * t * (3 - 2 * t))
 
     const fov = (camera.fov ?? 50) * (Math.PI / 180)

@@ -8,6 +8,7 @@ import { Scene } from './components/Scene'
 import { ChristmasTree } from './components/ChristmasTree'
 import { Background } from './components/Background'
 import { Overlay } from './components/Overlay'
+import { GreetingOverlay } from './components/GreetingOverlay'
 import { Snow } from './components/Snow'
 import { ResponsiveCamera } from './components/ResponsiveCamera'
 
@@ -93,6 +94,7 @@ export default function App() {
         </EffectComposer>
       </Canvas>
 
+      <GreetingOverlay show={!isTreeShape} />
       <Overlay isTreeShape={isTreeShape} />
     </div>
   )
