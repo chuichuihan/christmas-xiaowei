@@ -1,7 +1,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Canvas } from '@react-three/fiber'
+import { Canvas, useThree } from '@react-three/fiber'
 import { OrbitControls, PerspectiveCamera, Preload, useProgress } from '@react-three/drei'
-import { EffectComposer, Bloom, Noise, Vignette, ChromaticAberration } from '@react-three/postprocessing'
+import { EffectComposer, Bloom, Noise, Vignette, ChromaticAberration, SMAA } from '@react-three/postprocessing'
 import { BlendFunction } from 'postprocessing'
 import { CineonToneMapping, Vector2 } from 'three'
 import { Scene } from './components/Scene'
@@ -16,6 +16,39 @@ import { LoadingScreen } from './components/LoadingScreen'
 import { ThreeBoot } from './components/ThreeBoot'
 import { ProjectInfo } from './components/ProjectInfo'
 
+function isLowMemoryIPad(): boolean {
+  if (typeof navigator === 'undefined' || typeof window === 'undefined') return false
+  const ua = navigator.userAgent || ''
+  const isIPad = /\biPad\b/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  if (!isIPad) return false
+  const min = Math.min(window.screen.width, window.screen.height)
+  const max = Math.max(window.screen.width, window.screen.height)
+  return min === 810 && max === 1080
+}
+
+function PostProcessing({ lowMemory }: { lowMemory: boolean }) {
+  const gl = useThree((s) => s.gl)
+  const samples = lowMemory ? 0 : Math.min(8, gl.capabilities.maxSamples ?? 0)
+  const effects = (
+    <>
+      <Bloom luminanceThreshold={0.6} luminanceSmoothing={0.9} intensity={1.5} radius={0.8} mipmapBlur />
+      <Bloom luminanceThreshold={1.0} intensity={0.6} radius={1.2} mipmapBlur />
+      <ChromaticAberration blendFunction={BlendFunction.NORMAL} offset={new Vector2(0.0015, 0.0015)} radialModulation modulationOffset={0.5} />
+      <Noise opacity={0.035} blendFunction={BlendFunction.OVERLAY} />
+      <Vignette offset={0.15} darkness={0.85} />
+    </>
+  )
+  if (samples === 0) {
+    return (
+      <EffectComposer multisampling={0}>
+        <SMAA />
+        {effects}
+      </EffectComposer>
+    )
+  }
+  return <EffectComposer multisampling={samples}>{effects}</EffectComposer>
+}
+
 export default function App() {
   const [isTreeShape, setIsTreeShape] = useState(false)
   const [fontsReady, setFontsReady] = useState(false)
@@ -23,6 +56,7 @@ export default function App() {
   const [showContent, setShowContent] = useState(false)
   const [recipientName, setRecipientName] = useState<string | null>(null)
   const pointerRef = useRef({ x: 0, y: 0 })
+  const lowMemory = useMemo(() => isLowMemoryIPad(), [])
 
   const { progress } = useProgress()
 
@@ -94,10 +128,12 @@ export default function App() {
       onPointerUp={handlePointerUp}
     >
       <Canvas
+        dpr={lowMemory ? [1, 1.5] : [1, 2]}
         gl={{
           toneMapping: CineonToneMapping,
           toneMappingExposure: 1.2,
-          antialias: true,
+          antialias: !lowMemory,
+          powerPreference: 'high-performance',
         }}
         style={{ background: '#050a14' }}
       >
@@ -120,29 +156,7 @@ export default function App() {
           <Snow />
           <ChristmasTree isTreeShape={isTreeShape} />
 
-          <EffectComposer multisampling={8}>
-            <Bloom
-              luminanceThreshold={0.6}
-              luminanceSmoothing={0.9}
-              intensity={1.5}
-              radius={0.8}
-              mipmapBlur
-            />
-            <Bloom
-              luminanceThreshold={1.0}
-              intensity={0.6}
-              radius={1.2}
-              mipmapBlur
-            />
-            <ChromaticAberration
-              blendFunction={BlendFunction.NORMAL}
-              offset={new Vector2(0.0015, 0.0015)}
-              radialModulation={true}
-              modulationOffset={0.5}
-            />
-            <Noise opacity={0.035} blendFunction={BlendFunction.OVERLAY} />
-            <Vignette offset={0.15} darkness={0.85} />
-          </EffectComposer>
+          <PostProcessing lowMemory={lowMemory} />
 
           <ThreeBoot onReady={() => setThreeReady(true)} />
           <Preload all />
