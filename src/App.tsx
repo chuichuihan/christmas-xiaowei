@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useMemo } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, PerspectiveCamera } from '@react-three/drei'
 import { EffectComposer, Bloom, Noise, Vignette, ChromaticAberration } from '@react-three/postprocessing'
@@ -27,6 +27,10 @@ export default function App() {
     if (dist < 5) setIsTreeShape((prev) => !prev)
   }
 
+  // 记忆化静态配置，防止重渲染时相机重置
+  const cameraPosition = useMemo<[number, number, number]>(() => [0, 4, 18], [])
+  const orbitTarget = useMemo<[number, number, number]>(() => [0, 4, 0], [])
+
   return (
     <div
       style={{ width: '100vw', height: '100vh', touchAction: 'none' }}
@@ -41,10 +45,11 @@ export default function App() {
         }}
         style={{ background: '#050a14' }}
       >
-        <PerspectiveCamera makeDefault position={[0, 4, 18]} fov={50} />
+        <PerspectiveCamera makeDefault position={cameraPosition} fov={50} />
         <ResponsiveCamera />
         <OrbitControls
-          target={[0, 4, 0]}
+          makeDefault
+          target={orbitTarget}
           minDistance={10}
           maxDistance={25}
           enablePan={false}
