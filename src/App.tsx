@@ -52,7 +52,8 @@ export default function App() {
           target={orbitTarget}
           minDistance={10}
           maxDistance={25}
-          enablePan={false}
+          enablePan={true}
+          screenSpacePanning={true}
           minPolarAngle={Math.PI / 6}
           maxPolarAngle={Math.PI / 2}
         />
