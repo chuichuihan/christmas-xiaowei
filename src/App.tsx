@@ -168,46 +168,54 @@ export default function App() {
       {recipientName && (
         <>
           <GreetingOverlay show={!isTreeShape && !isLoading} name={recipientName} />
-          {!isLoading && <Overlay isTreeShape={isTreeShape} />}
+          {!isLoading && <Overlay />}
           {!isLoading && (
-            <div
-              style={{
-                position: 'fixed',
-                bottom: '40px',
-                left: '20px',
-                zIndex: 100,
-                display: 'flex',
-                gap: '12px',
-                alignItems: 'center',
-              }}
-            >
-              <button
-                onClick={handleBack}
+            <>
+              <div
                 style={{
-                  padding: '10px 24px',
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  color: 'rgba(255, 255, 255, 0.7)',
-                  background: 'rgba(0, 0, 0, 0.4)',
-                  border: '1px solid rgba(255, 255, 255, 0.15)',
-                  borderRadius: '20px',
-                  backdropFilter: 'blur(4px)',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(0, 0, 0, 0.5)'
-                  e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(0, 0, 0, 0.4)'
-                  e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)'
+                  position: 'fixed',
+                  bottom: '40px',
+                  left: '20px',
+                  zIndex: 100,
                 }}
               >
-                Back
-              </button>
-              <ProjectInfo />
-            </div>
+                <button
+                  onClick={handleBack}
+                  style={{
+                    padding: '10px 24px',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    color: 'rgba(255, 255, 255, 0.7)',
+                    background: 'rgba(0, 0, 0, 0.4)',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    borderRadius: '20px',
+                    backdropFilter: 'blur(4px)',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'rgba(0, 0, 0, 0.5)'
+                    e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'rgba(0, 0, 0, 0.4)'
+                    e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)'
+                  }}
+                >
+                  Back
+                </button>
+              </div>
+              <div
+                style={{
+                  position: 'fixed',
+                  bottom: '40px',
+                  right: '20px',
+                  zIndex: 100,
+                }}
+              >
+                <ProjectInfo />
+              </div>
+            </>
           )}
         </>
       )}

@@ -7,7 +7,9 @@ export function ProjectInfo() {
   return (
     <>
       <button
-        onClick={() => setIsOpen(true)}
+        onPointerDown={(e) => e.stopPropagation()}
+        onPointerUp={(e) => e.stopPropagation()}
+        onClick={(e) => { e.stopPropagation(); setIsOpen(true) }}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         style={{
