@@ -18,6 +18,7 @@ export default function App() {
   const [isTreeShape, setIsTreeShape] = useState(false)
   const [fontsReady, setFontsReady] = useState(false)
   const [threeReady, setThreeReady] = useState(false)
+  const [showContent, setShowContent] = useState(false)
   const pointerRef = useRef({ x: 0, y: 0 })
 
   const { progress } = useProgress()
@@ -39,7 +40,14 @@ export default function App() {
     }
   }, [])
 
-  const isLoading = !fontsReady || !threeReady
+  useEffect(() => {
+    if (fontsReady && threeReady) {
+      const timer = setTimeout(() => setShowContent(true), 1000)
+      return () => clearTimeout(timer)
+    }
+  }, [fontsReady, threeReady])
+
+  const isLoading = !showContent
 
   const handlePointerDown = (e: React.PointerEvent) => {
     if (isLoading) return
