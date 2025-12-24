@@ -615,8 +615,7 @@ function Star({ mixRef }: { mixRef: { current: number } }) {
 
     groupRef.current.position.lerpVectors(scatter, tree, t)
     
-    // Gentle floating rotation
-    groupRef.current.rotation.y = Math.sin(time * 0.2) * 0.2
+    groupRef.current.rotation.y = 0
     
     // Breathing scale - Reduced base size to 0.75
     const pulse = 1 + Math.sin(time * 1.5) * 0.02

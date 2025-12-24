@@ -73,7 +73,7 @@ export function generateOrnamentPosition(
 
   switch (type) {
     case 'star':
-      tree = new THREE.Vector3(0, 11.57, 0)
+      tree = new THREE.Vector3(0, 11.58, 0)
       break
     case 'diamond':
       // Middle layer h=3~9
