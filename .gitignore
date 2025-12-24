@@ -25,4 +25,4 @@ dist-ssr
 
 *.md
 nul
-
+/docs

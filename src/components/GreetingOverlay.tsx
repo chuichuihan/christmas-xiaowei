@@ -88,17 +88,14 @@ export function GreetingOverlay({ show }: GreetingOverlayProps) {
 
           <h1
             style={{
-              fontFamily: '"ZCOOL KuaiLe", cursive',
+              fontFamily: '"Noto Serif SC", serif',
+              fontWeight: 300,
               fontSize: 'clamp(4rem, 12vw, 8rem)',
               margin: 0,
               lineHeight: 1.1,
               letterSpacing: '0.05em',
-              background: 'linear-gradient(120deg, #FFB7C5 0%, #FFD1DC 20%, #FFFFFF 50%, #E6E6FA 80%, #FFB7C5 100%)',
-              backgroundSize: '200% auto',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              animation: show ? 'shimmer-text 4s linear infinite' : 'none',
-              filter: 'drop-shadow(0 0 20px rgba(255, 105, 180, 0.3)) drop-shadow(0 2px 4px rgba(0,0,0,0.1))',
+              color: '#FFD700',
+              textShadow: '0 0 15px rgba(255, 215, 0, 0.6), 0 0 30px rgba(255, 180, 0, 0.3)',
             }}
           >
             小薇
