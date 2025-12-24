@@ -14,6 +14,7 @@ import { Snow } from './components/Snow'
 import { ResponsiveCamera } from './components/ResponsiveCamera'
 import { LoadingScreen } from './components/LoadingScreen'
 import { ThreeBoot } from './components/ThreeBoot'
+import { ProjectInfo } from './components/ProjectInfo'
 
 export default function App() {
   const [isTreeShape, setIsTreeShape] = useState(false)
@@ -161,6 +162,9 @@ export default function App() {
                 bottom: '40px',
                 left: '20px',
                 zIndex: 100,
+                display: 'flex',
+                gap: '12px',
+                alignItems: 'center',
               }}
             >
               <button
@@ -188,6 +192,7 @@ export default function App() {
               >
                 Back
               </button>
+              <ProjectInfo />
             </div>
           )}
         </>
