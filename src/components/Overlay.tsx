@@ -25,7 +25,7 @@ export function Overlay({ isTreeShape }: OverlayProps) {
           backdropFilter: 'blur(4px)',
         }}
       >
-        {isTreeShape ? 'Click anywhere to scatter' : 'Click anywhere to assemble'}
+        {isTreeShape ? 'Click anywhere' : 'Click anywhere'}
       </div>
     </div>
   )
