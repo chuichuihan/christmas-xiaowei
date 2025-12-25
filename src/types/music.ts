@@ -1,22 +1,22 @@
 export interface MusicTrack {
-  id: number
+  id: string
   name: string
   artists?: string[]
+  platform?: string
 }
 
-export interface NeteaseSearchResponse {
+export interface TuneHubSearchResponse {
   code: number
-  result?: {
-    songs?: {
-      id: number
+  message?: string
+  data?: {
+    keyword: string
+    total: number
+    results: {
+      id: string
       name: string
-      artists?: { name: string }[]
-      ar?: { name: string }[]
+      artist: string
+      album?: string
+      platform: string
     }[]
   }
-}
-
-export interface NeteaseSongUrlResponse {
-  code: number
-  data?: { id: number; url: string | null }[]
 }

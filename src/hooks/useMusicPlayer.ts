@@ -18,7 +18,6 @@ export function useMusicPlayer(playlist: MusicTrack[], options: UseMusicPlayerOp
   const fadeRafRef = useRef<number>(0)
   const hasFadedRef = useRef(false)
   const targetVolumeRef = useRef(1)
-  const switchIdRef = useRef(0)
   const mountedRef = useRef(true)
 
   const currentTrack = playlist[currentIndex] ?? null
@@ -88,25 +87,26 @@ export function useMusicPlayer(playlist: MusicTrack[], options: UseMusicPlayerOp
   const switchTrack = useCallback(async (index: number) => {
     const track = playlist[index]
     if (!track) return
-    const requestId = ++switchIdRef.current
     setCurrentIndex(index)
     setIsLoading(true)
-    const url = await getSongUrl(track.id)
-    if (!mountedRef.current || switchIdRef.current !== requestId) return
-    setIsLoading(false)
-    if (!url) return
+    const url = getSongUrl(track.id, track.platform)
     const audio = audioRef.current
     if (!audio) return
     const wasPlaying = !audio.paused
     audio.src = url
     audio.load()
-    if (wasPlaying || isPlaying) {
-      audio.volume = hasFadedRef.current ? targetVolumeRef.current : 0
-      try {
-        await audio.play()
-        if (!hasFadedRef.current) fadeIn()
-      } catch { /* blocked */ }
+    audio.oncanplay = async () => {
+      if (!mountedRef.current) return
+      setIsLoading(false)
+      if (wasPlaying || isPlaying) {
+        audio.volume = hasFadedRef.current ? targetVolumeRef.current : 0
+        try {
+          await audio.play()
+          if (!hasFadedRef.current) fadeIn()
+        } catch { /* blocked */ }
+      }
     }
+    audio.onerror = () => setIsLoading(false)
   }, [playlist, isPlaying, fadeIn])
 
   return {
