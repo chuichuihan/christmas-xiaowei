@@ -15,6 +15,9 @@ import { ResponsiveCamera } from './components/ResponsiveCamera'
 import { LoadingScreen } from './components/LoadingScreen'
 import { ThreeBoot } from './components/ThreeBoot'
 import { ProjectInfo } from './components/ProjectInfo'
+import { MusicPlayer } from './components/MusicPlayer'
+import { preloadFirstSong } from './services/musicApi'
+import type { MusicTrack } from './types/music'
 
 function isLowMemoryIPad(): boolean {
   if (typeof navigator === 'undefined' || typeof window === 'undefined') return false
@@ -53,8 +56,10 @@ export default function App() {
   const [isTreeShape, setIsTreeShape] = useState(false)
   const [fontsReady, setFontsReady] = useState(false)
   const [threeReady, setThreeReady] = useState(false)
+  const [musicReady, setMusicReady] = useState(false)
   const [showContent, setShowContent] = useState(false)
   const [recipientName, setRecipientName] = useState<string | null>(null)
+  const [musicData, setMusicData] = useState<{ url: string; playlist: MusicTrack[] } | null>(null)
   const pointerRef = useRef({ x: 0, y: 0 })
   const lowMemory = useMemo(() => isLowMemoryIPad(), [])
 
@@ -86,11 +91,27 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    if (fontsReady && threeReady) {
+    let cancelled = false
+    const timeout = setTimeout(() => !cancelled && setMusicReady(true), 10000)
+
+    preloadFirstSong().then((data) => {
+      if (cancelled) return
+      if (data) setMusicData({ url: data.url, playlist: data.playlist })
+      setMusicReady(true)
+    })
+
+    return () => {
+      cancelled = true
+      clearTimeout(timeout)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (fontsReady && threeReady && musicReady) {
       const timer = setTimeout(() => setShowContent(true), 1000)
       return () => clearTimeout(timer)
     }
-  }, [fontsReady, threeReady])
+  }, [fontsReady, threeReady, musicReady])
 
   const isLoading = !showContent
 
@@ -171,6 +192,19 @@ export default function App() {
           {!isLoading && <Overlay />}
           {!isLoading && (
             <>
+              <div
+                style={{
+                  position: 'fixed',
+                  top: '40px',
+                  left: '20px',
+                  zIndex: 100,
+                }}
+              >
+                <MusicPlayer
+                  playlist={musicData?.playlist ?? []}
+                  preloadedUrl={musicData?.url}
+                />
+              </div>
               <div
                 style={{
                   position: 'fixed',
