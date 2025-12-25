@@ -1,6 +1,6 @@
 import type { MusicTrack, TuneHubSearchResponse } from '../types/music'
 
-const API_BASE = '/api/music'
+const API_BASE = 'https://music-dl.sayqz.com/api'
 const TIMEOUT_MS = 15000
 
 const FALLBACK_SONGS: MusicTrack[] = [
