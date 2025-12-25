@@ -26,19 +26,21 @@ export async function searchChristmasSongs(keywords = '圣诞', limit = 20): Pro
     const url = `${API_BASE}/?type=aggregateSearch&keyword=${encodeURIComponent(keywords)}&limit=${limit}`
     const data = await fetchWithTimeout<TuneHubSearchResponse>(url)
     if (data.code !== 200 || !data.data?.results?.length) return FALLBACK_SONGS
-    return data.data.results.map((s) => ({
-      id: s.id,
-      name: s.name,
-      artists: s.artist ? [s.artist] : undefined,
-      platform: s.platform,
-    }))
+    return data.data.results
+      .filter((s) => s.platform === 'netease')
+      .map((s) => ({
+        id: s.id,
+        name: s.name,
+        artists: s.artist ? [s.artist] : undefined,
+        platform: s.platform,
+      }))
   } catch {
     return FALLBACK_SONGS
   }
 }
 
 export function getSongUrl(id: string, platform = 'netease'): string {
-  return `${API_BASE}/?source=${platform}&id=${id}&type=url&br=320k`
+  return `${API_BASE}/?source=netease&id=${id}&type=url&br=320k`
 }
 
 export async function preloadFirstSong(): Promise<{ track: MusicTrack; url: string; playlist: MusicTrack[] } | null> {
