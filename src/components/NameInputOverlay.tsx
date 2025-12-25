@@ -37,6 +37,7 @@ export function NameInputOverlay({ show, onSubmit }: NameInputOverlayProps) {
   }, [name, onSubmit])
 
   const isEnglishOnly = /^[a-zA-Z\s]+$/.test(name)
+  const containsForbidden = /薇|wei/i.test(name)
 
   return (
     <>
@@ -179,10 +180,10 @@ export function NameInputOverlay({ show, onSubmit }: NameInputOverlayProps) {
             <button
               className="action-btn gift-btn"
               onClick={handleGift}
-              disabled={!name.trim()}
+              disabled={!name.trim() || containsForbidden}
               style={{ minWidth: '130px' }}
             >
-              {copied ? '已复制!' : '赠送给TA'}
+              {containsForbidden ? '无法生成哟！' : copied ? '已复制!' : '赠送给TA'}
             </button>
             <button
               className="action-btn preview-btn"
