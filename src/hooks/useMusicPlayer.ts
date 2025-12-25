@@ -7,6 +7,8 @@ interface UseMusicPlayerOptions {
   fadeInMs?: number
 }
 
+const clampVolume = (v: number) => Math.max(0, Math.min(1, v))
+
 export function useMusicPlayer(playlist: MusicTrack[], options: UseMusicPlayerOptions = {}) {
   const { preloadedUrl, fadeInMs = 3000 } = options
 
@@ -28,7 +30,7 @@ export function useMusicPlayer(playlist: MusicTrack[], options: UseMusicPlayerOp
     const audio = new Audio()
     audio.preload = 'auto'
     audio.loop = true
-    audio.volume = 0
+    audio.volume = clampVolume(0)
     audioRef.current = audio
 
     if (preloadedUrl) {
@@ -60,7 +62,7 @@ export function useMusicPlayer(playlist: MusicTrack[], options: UseMusicPlayerOp
     const start = performance.now()
     const step = (now: number) => {
       const t = Math.min(1, (now - start) / fadeInMs)
-      audio.volume = targetVolumeRef.current * t
+      audio.volume = clampVolume(targetVolumeRef.current * t)
       if (t < 1) fadeRafRef.current = requestAnimationFrame(step)
       else hasFadedRef.current = true
     }
@@ -71,7 +73,7 @@ export function useMusicPlayer(playlist: MusicTrack[], options: UseMusicPlayerOp
     const audio = audioRef.current
     if (!audio?.src) return
     try {
-      if (!hasFadedRef.current) audio.volume = 0
+      if (!hasFadedRef.current) audio.volume = clampVolume(0)
       await audio.play()
       if (!hasFadedRef.current) fadeIn()
     } catch { /* autoplay blocked */ }
@@ -107,7 +109,7 @@ export function useMusicPlayer(playlist: MusicTrack[], options: UseMusicPlayerOp
       if (!mountedRef.current || switchIdRef.current !== currentSwitchId) return
       setIsLoading(false)
       if (wasPlaying) {
-        audio.volume = hasFadedRef.current ? targetVolumeRef.current : 0
+        audio.volume = clampVolume(hasFadedRef.current ? targetVolumeRef.current : 0)
         try {
           await audio.play()
           if (mountedRef.current && switchIdRef.current === currentSwitchId && !hasFadedRef.current) {

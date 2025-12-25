@@ -102,7 +102,7 @@ function InfoModal({ onClose }: { onClose: () => void }) {
             Created by
           </p>
           <p style={{ margin: '6px 0 0 0', fontSize: '22px', fontWeight: 600, letterSpacing: '0.05em' }}>
-            H&W
+            Han&Wwei
           </p>
         </div>
 
