@@ -103,6 +103,8 @@ export function MusicPlayer({ playlist, preloadedUrl, onReady }: MusicPlayerProp
           }}
         >
           <div
+            onPointerDown={(e) => e.stopPropagation()}
+            onPointerUp={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
             style={{
               width: 'min(90vw, 320px)',
