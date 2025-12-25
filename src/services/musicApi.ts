@@ -39,7 +39,7 @@ export async function searchChristmasSongs(keywords = '圣诞', limit = 20): Pro
   }
 }
 
-export function getSongUrl(id: string, platform = 'netease'): string {
+export function getSongUrl(id: string, _platform = 'netease'): string {
   return `${API_BASE}/?source=netease&id=${id}&type=url&br=320k`
 }
 
