@@ -19,10 +19,12 @@ export function useMusicPlayer(playlist: MusicTrack[], options: UseMusicPlayerOp
   const hasFadedRef = useRef(false)
   const targetVolumeRef = useRef(1)
   const mountedRef = useRef(true)
+  const switchIdRef = useRef(0)
 
   const currentTrack = playlist[currentIndex] ?? null
 
   useEffect(() => {
+    mountedRef.current = true
     const audio = new Audio()
     audio.preload = 'auto'
     audio.loop = true
@@ -91,23 +93,47 @@ export function useMusicPlayer(playlist: MusicTrack[], options: UseMusicPlayerOp
     setIsLoading(true)
     const url = getSongUrl(track.id, track.platform)
     const audio = audioRef.current
-    if (!audio) return
-    const wasPlaying = !audio.paused
-    audio.src = url
-    audio.load()
-    audio.oncanplay = async () => {
-      if (!mountedRef.current) return
+    if (!audio) {
       setIsLoading(false)
-      if (wasPlaying || isPlaying) {
+      return
+    }
+
+    const currentSwitchId = ++switchIdRef.current
+    const wasPlaying = !audio.paused
+
+    const handleCanPlay = async () => {
+      audio.removeEventListener('canplay', handleCanPlay)
+      audio.removeEventListener('error', handleError)
+      if (!mountedRef.current || switchIdRef.current !== currentSwitchId) return
+      setIsLoading(false)
+      if (wasPlaying) {
         audio.volume = hasFadedRef.current ? targetVolumeRef.current : 0
         try {
           await audio.play()
-          if (!hasFadedRef.current) fadeIn()
+          if (mountedRef.current && switchIdRef.current === currentSwitchId && !hasFadedRef.current) {
+            fadeIn()
+          }
         } catch { /* blocked */ }
       }
     }
-    audio.onerror = () => setIsLoading(false)
-  }, [playlist, isPlaying, fadeIn])
+
+    const handleError = () => {
+      audio.removeEventListener('canplay', handleCanPlay)
+      audio.removeEventListener('error', handleError)
+      if (!mountedRef.current || switchIdRef.current !== currentSwitchId) return
+      setIsLoading(false)
+    }
+
+    audio.addEventListener('canplay', handleCanPlay, { once: true })
+    audio.addEventListener('error', handleError, { once: true })
+
+    audio.src = url
+    audio.load()
+
+    if (audio.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) {
+      handleCanPlay()
+    }
+  }, [playlist, fadeIn])
 
   return {
     isPlaying,

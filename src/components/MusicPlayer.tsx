@@ -118,7 +118,17 @@ export function MusicPlayer({ playlist, preloadedUrl, onReady }: MusicPlayerProp
             }}
           >
             <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>Christmas Playlist</h3>
-            <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div
+              className="playlist-scroll"
+              style={{
+                overflowY: 'auto',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 8,
+                scrollbarWidth: 'thin',
+                scrollbarColor: 'rgba(255,255,255,0.2) transparent',
+              }}
+            >
               {playlist.map((song, idx) => (
                 <div
                   key={song.id}
@@ -166,6 +176,19 @@ export function MusicPlayer({ playlist, preloadedUrl, onReady }: MusicPlayerProp
       <style>{`
         @keyframes spin {
           to { transform: rotate(360deg); }
+        }
+        .playlist-scroll::-webkit-scrollbar {
+          width: 5px;
+        }
+        .playlist-scroll::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .playlist-scroll::-webkit-scrollbar-thumb {
+          background: rgba(255,255,255,0.2);
+          border-radius: 10px;
+        }
+        .playlist-scroll::-webkit-scrollbar-thumb:hover {
+          background: rgba(255,255,255,0.3);
         }
       `}</style>
     </>
