@@ -3,7 +3,7 @@ import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { fireflyVertexShader, fireflyFragmentShader } from '../shaders/fireflyRiver'
 
-const PARTICLE_COUNT = 600
+const PARTICLE_COUNT = 1600
 
 interface FireflyRiverProps {
   mixRef: { current: number }
